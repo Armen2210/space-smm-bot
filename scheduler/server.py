@@ -19,7 +19,7 @@ def publish_post():
     try:
         logging.info(f"📥 Получен запрос на публикацию от IP: {request.remote_addr}")
         result = subprocess.run(
-            ["python", "scheduler/trigger.py"],
+            ["python3", os.path.join(os.path.dirname(__file__), "trigger.py")],
             check=True,
             timeout=60,
             capture_output=True,
