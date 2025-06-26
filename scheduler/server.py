@@ -18,12 +18,16 @@ app = Flask(__name__)
 def publish_post():
     try:
         logging.info(f"📥 Получен запрос на публикацию от IP: {request.remote_addr}")
+        # 👇 Передаём переменные окружения в subprocess
+        env = os.environ.copy()
+
         result = subprocess.run(
             ["python3", os.path.join(os.path.dirname(__file__), "trigger.py")],
             check=True,
             timeout=60,
             capture_output=True,
-            text=True
+            text=True,
+            env=env  # 👈 передаём переменные окружения дочернему процессу
         )
         logging.info(f"📤 Результат запуска: {result.stdout.strip()}")
         return jsonify({"status": "ok", "message": "Пост опубликован"}), 200
