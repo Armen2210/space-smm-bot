@@ -121,6 +121,9 @@ def send_post_to_telegram(client: OpenAI, bot: Bot, chat_id: int) -> None:
     try:
         logging.info("🚀 Начинаем генерацию текста")
         text, topic = generate_travel_post(client)
+
+        logging.info(f"🧠 Сгенерирован текст на тему: {topic}")
+        logging.info("🖼 Начинаем генерацию изображения")
         image_url = generate_image_url(client, topic)
 
         message = f"<b>{topic}</b>\n\n{text}"
