@@ -1,10 +1,13 @@
 # scheduler/server.py
 
 import os
-import subprocess
 import logging
 from flask import Flask, request, jsonify
 from dotenv import load_dotenv
+from telegram import Bot
+from openai import OpenAI
+from utils.post_utils import send_post_to_telegram
+import httpx
 
 # Загрузка .env
 load_dotenv()
@@ -12,37 +15,48 @@ load_dotenv()
 # Настройка логов
 logging.basicConfig(level=logging.INFO)
 
+# Инициализация Flask
 app = Flask(__name__)
+
+# Конфигурация переменных
+TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+TARGET_CHAT_ID = os.getenv("TARGET_CHAT_ID")
+
+# Проверка
+assert TELEGRAM_TOKEN, "⛔ TELEGRAM_TOKEN не задан"
+assert OPENAI_API_KEY, "⛔ OPENAI_API_KEY не задан"
+assert TARGET_CHAT_ID, "⛔ TARGET_CHAT_ID не задан"
+
+# Инициализация клиентов
+timeout_config = httpx.Timeout(60.0, connect=10.0)
+openai_client = OpenAI(api_key=OPENAI_API_KEY, timeout=timeout_config)
+telegram_bot = Bot(token=TELEGRAM_TOKEN)
+
 
 @app.route('/publish', methods=['POST'])
 def publish_post():
     try:
-        logging.info(f"📥 Получен запрос на публикацию от IP: {request.remote_addr}")
-        # 👇 Передаём переменные окружения в subprocess
-        env = os.environ.copy()
+        logging.info(f"📥 Получен запрос от IP: {request.remote_addr}")
 
-        result = subprocess.run(
-            ["python", "-m", "scheduler.trigger"],
-            check=True,
-            timeout=60,
-            capture_output=True,
-            text=True,
-            env=env  # 👈 передаём переменные окружения дочернему процессу
+        send_post_to_telegram(
+            client=openai_client,
+            bot=telegram_bot,
+            chat_id=int(TARGET_CHAT_ID)
         )
-        logging.info(f"📤 Результат запуска: {result.stdout.strip()}")
+
+        logging.info("✅ Пост успешно опубликован.")
         return jsonify({"status": "ok", "message": "Пост опубликован"}), 200
 
-    except subprocess.CalledProcessError as e:
-        logging.error(f"❌ Ошибка при запуске trigger.py: {e.stderr.strip()}")
-        return jsonify({"status": "error", "message": str(e.stderr)}), 500
+    except Exception as e:
+        logging.error(f"❌ Ошибка при публикации: {e}")
+        return jsonify({"status": "error", "message": str(e)}), 500
 
-    except subprocess.TimeoutExpired:
-        logging.error("⏱ Таймаут выполнения trigger.py")
-        return jsonify({"status": "error", "message": "Timeout при запуске trigger.py"}), 504
 
 @app.route('/', methods=['GET'])
 def home():
     return "🚀 Сервер работает!", 200
+
 
 if __name__ == "__main__":
     port = int(os.getenv("PORT", 5000))
