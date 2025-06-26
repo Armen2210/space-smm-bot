@@ -1,21 +1,24 @@
 # scheduler/trigger.py
 
-import sys
 import os
+import sys
 import logging
+
+# 📂 Добавляем корень проекта в PYTHONPATH
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, BASE_DIR)
+
+# ✅ Отладка
+print("✅ trigger.py запущен")
+logging.basicConfig(level=logging.INFO)
+logging.info("✅ trigger.py запущен")
+
 from dotenv import load_dotenv
 from telegram import Bot
 from openai import OpenAI
 from utils.post_utils import send_post_to_telegram
 import httpx
 
-# ✅ Отладочный вывод
-print("✅ trigger.py запущен")
-logging.basicConfig(level=logging.INFO)
-logging.info("✅ trigger.py запущен (логгер работает)")
-
-# 📂 Добавляем корень проекта в PYTHONPATH
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 # Загрузка переменных окружения
 load_dotenv()
