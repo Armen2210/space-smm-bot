@@ -22,7 +22,7 @@ def publish_post():
         env = os.environ.copy()
 
         result = subprocess.run(
-            ["python3", os.path.join(os.path.dirname(__file__), "trigger.py")],
+            ["python", "-m", "scheduler.trigger"],
             check=True,
             timeout=60,
             capture_output=True,
