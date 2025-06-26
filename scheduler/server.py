@@ -28,11 +28,13 @@ app = Flask(__name__)
 TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 TARGET_CHAT_ID = os.getenv("TARGET_CHAT_ID")
+PUBLISH_SECRET = os.getenv("PUBLISH_SECRET")
 
 # Проверка
 assert TELEGRAM_TOKEN, "⛔ TELEGRAM_TOKEN не задан"
 assert OPENAI_API_KEY, "⛔ OPENAI_API_KEY не задан"
 assert TARGET_CHAT_ID, "⛔ TARGET_CHAT_ID не задан"
+assert PUBLISH_SECRET, "⛔ PUBLISH_SECRET не задан"
 
 # Инициализация клиентов
 timeout_config = httpx.Timeout(60.0, connect=10.0)
@@ -41,6 +43,12 @@ telegram_bot = Bot(token=TELEGRAM_TOKEN)
 
 @app.route('/publish', methods=['POST'])
 def publish_post():
+    # === 🔒 Проверка заголовка безопасности ===
+    token = request.headers.get("X-Auth-Token")
+    if token != PUBLISH_SECRET:
+        logging.warning("⛔ Неавторизованный запрос на публикацию")
+        return jsonify({"status": "error", "message": "Unauthorized"}), 403
+
     try:
         logging.info(f"📥 Получен запрос от IP: {request.remote_addr}")
 
