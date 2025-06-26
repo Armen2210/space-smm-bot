@@ -1,13 +1,19 @@
 # scheduler/server.py
-
 import os
+import sys
 import logging
 from flask import Flask, request, jsonify
 from dotenv import load_dotenv
+import httpx
+
+# === 📂 Добавляем корень проекта в PYTHONPATH ===
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, BASE_DIR)
+
 from telegram import Bot
 from openai import OpenAI
 from utils.post_utils import send_post_to_telegram
-import httpx
+
 
 # Загрузка .env
 load_dotenv()
