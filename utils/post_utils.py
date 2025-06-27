@@ -1,5 +1,6 @@
 from openai import OpenAI
-from datetime import date
+from telegram import Message
+from datetime import date, datetime
 import json
 import os
 import time
@@ -9,6 +10,8 @@ from telegram import Bot
 # 📍 Путь к файлу расписания
 SCHEDULE_FILE = os.path.join(os.path.dirname(__file__), "..", "schedule_2025_unique.json")
 
+# 📍 Путь к файлу лога сообщений
+MESSAGES_LOG = os.path.join(os.path.dirname(__file__), "..", "messages_log.json")
 
 def get_topic_for_today() -> str:
     """
@@ -83,13 +86,18 @@ def generate_image_url(client: OpenAI, topic: str, retries=2) -> str:
     """
     image_prompt = (
         f"Ultra-realistic high-resolution photograph of a futuristic tourist destination: {topic}. "
-        f"Captured on location in the 23rd century by a professional space photographer using a Nikon Z9 camera with a 50mm lens. "
-        f"The scene includes detailed architecture, terrain texture, human activity (tourists in advanced spacewear), "
-        f"transparent domes, artificial ecosystems, realistic alien landscapes, and atmospheric haze. "
-        f"Natural sunlight or local planetary lighting with real-time shadows, soft reflections on surfaces, lens flares from glass or metals, "
-        f"dust particles in the air, surface abrasions, environmental effects like wind, mist, or clouds. "
-        f"Photographic color palette, cinematic tone, documentary-style framing (mid-distance, natural angle, depth-of-field). "
-        f"Avoid stylized art, no painting, no illustration, no concept art, no CGI or 3D rendering, no surreal elements, no unrealistic symmetry."
+        f"Captured in the 23rd century by a professional space photojournalist using a Nikon Z9 full-frame DSLR camera with a 50mm prime lens. "
+        f"The scene shows highly detailed architecture and terrain textures, authentic human activity (tourists in advanced space suits with visible material textures and reflections), "
+        f"transparent domes, artificial ecosystems, and realistic alien landscapes. "
+        f"Atmospheric haze and fine environmental particles (dust, mist, vapor) are illuminated by natural sunlight or local planetary lighting with accurate real-time shadows. "
+        f"Subtle lens flares and soft reflections appear on glass, metals, and polished surfaces. "
+        f"Surface abrasions, micro-scratches, and wear are visible on structures and equipment. "
+        f"Environmental effects such as wind-blown dust, drifting clouds, and ground-level fog contribute to the authentic atmosphere. "
+        f"Photographic color palette, true-to-life color grading, and cinematic tone. "
+        f"Documentary-style framing at eye level or mid-distance perspective with natural angle and shallow depth of field. "
+        f"Absolutely no stylized art, no illustration, no concept art, no CGI, no 3D rendering, no surreal elements, no cartoon effects, no exaggerated symmetry, no painting style, no unrealistic details. "
+        f"Real photo only."
+
     )
 
     for attempt in range(1, retries + 1):
@@ -111,6 +119,26 @@ def generate_image_url(client: OpenAI, topic: str, retries=2) -> str:
                 logging.error("❌ Все попытки генерации изображения не удались.")
                 return "https://dummyimage.com/1024x1024/000/fff&text=No+Image+Available"
 
+def save_message_info(message_id: int, topic: str):
+    """
+    Сохраняет информацию о сообщении в JSON файл.
+    """
+    data = {
+        "message_id": message_id,
+        "topic": topic,
+        "date": datetime.now().isoformat()
+    }
+
+    if os.path.exists(MESSAGES_LOG):
+        with open(MESSAGES_LOG, "r", encoding="utf-8") as f:
+            messages = json.load(f)
+    else:
+        messages = []
+
+    messages.append(data)
+
+    with open(MESSAGES_LOG, "w", encoding="utf-8") as f:
+        json.dump(messages, f, ensure_ascii=False, indent=2)
 
 # === 📦 СИНХРОННАЯ ВЕРСИЯ (используется в trigger.py) ===
 def send_post_to_telegram(client: OpenAI, bot: Bot, chat_id: int) -> None:
@@ -126,18 +154,19 @@ def send_post_to_telegram(client: OpenAI, bot: Bot, chat_id: int) -> None:
         logging.info("🖼 Начинаем генерацию изображения")
         image_url = generate_image_url(client, topic)
 
-        logging.info("📤 Публикуем в Telegram")
 
         message = f"<b>{topic}</b>\n\n{text}"
 
-        bot.send_photo(
+        sent_message: Message = bot.send_photo(
             chat_id=chat_id,
             photo=image_url,
             caption=message,
             parse_mode='HTML'
         )
 
-        logging.info(f"✅ Пост успешно опубликован: {topic}")
+        save_message_info(message_id=sent_message.message_id, topic=topic)
+
+        logging.info(f"✅ Пост опубликован: {topic}, message_id={sent_message.message_id}")
     except Exception as e:
         logging.error(f"❌ Ошибка при публикации поста в Telegram (sync): {e}")
         raise
@@ -155,14 +184,16 @@ async def send_post_to_telegram_async(client: OpenAI, bot: Bot, chat_id: int) ->
 
         message = f"<b>{topic}</b>\n\n{text}"
 
-        await bot.send_photo(
+        sent_message = await bot.send_photo(
             chat_id=chat_id,
             photo=image_url,
             caption=message,
             parse_mode='HTML'
         )
 
-        logging.info(f"✅ Пост успешно опубликован: {topic}")
+        save_message_info(message_id=sent_message.message_id, topic=topic)
+
+        logging.info(f"✅ Пост опубликован: {topic}, message_id={sent_message.message_id}")
     except Exception as e:
         logging.error(f"❌ Ошибка при публикации поста в Telegram (async): {e}")
         raise

@@ -6,6 +6,8 @@ import asyncio
 from flask import Flask, request, jsonify
 from dotenv import load_dotenv
 import httpx
+import json
+
 
 # === 📂 Добавляем корень проекта в PYTHONPATH ===
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -13,7 +15,7 @@ sys.path.insert(0, BASE_DIR)
 
 from telegram import Bot
 from openai import OpenAI
-from utils.post_utils import send_post_to_telegram_async  # ⚠️ исправлено
+from utils.post_utils import send_post_to_telegram_async, MESSAGES_LOG
 
 # Загрузка .env
 load_dotenv()
@@ -64,6 +66,24 @@ def publish_post():
 
     except Exception as e:
         logging.error(f"❌ Ошибка при публикации: {e}")
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+@app.route('/messages', methods=['GET'])
+def get_messages():
+    """
+    Возвращает JSON-массив с информацией обо всех постах.
+    """
+    try:
+        if not os.path.exists(MESSAGES_LOG):
+            return jsonify([]), 200
+
+        with open(MESSAGES_LOG, "r", encoding="utf-8") as f:
+            data = json.load(f)
+
+        return jsonify(data), 200
+
+    except Exception as e:
+        logging.error(f"❌ Ошибка при чтении messages_log.json: {e}")
         return jsonify({"status": "error", "message": str(e)}), 500
 
 @app.route('/', methods=['GET'])
