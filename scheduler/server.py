@@ -86,6 +86,27 @@ def get_messages():
         logging.error(f"❌ Ошибка при чтении messages_log.json: {e}")
         return jsonify({"status": "error", "message": str(e)}), 500
 
+@app.route('/analytics', methods=['GET'])
+def get_analytics():
+    """
+    Возвращает JSON-файл с аналитикой просмотров и комментариев.
+    """
+    analytics_log_path = os.path.join(BASE_DIR, "analytics_log.json")
+
+    try:
+        if not os.path.exists(analytics_log_path):
+            return jsonify([]), 200
+
+        with open(analytics_log_path, "r", encoding="utf-8") as f:
+            data = json.load(f)
+
+        return jsonify(data), 200
+
+    except Exception as e:
+        logging.error(f"❌ Ошибка при чтении analytics_log.json: {e}")
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
 @app.route('/', methods=['GET'])
 def home():
     return "🚀 Сервер работает!", 200
