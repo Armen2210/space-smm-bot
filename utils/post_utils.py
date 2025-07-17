@@ -70,13 +70,13 @@ def generate_travel_post(client: OpenAI) -> tuple[str, str]:
             {"role": "user", "content": prompt}
         ],
         temperature=0.95,
-        max_tokens=800
+        max_tokens=2800
     )
 
     content = response.choices[0].message.content.strip()
 
     # ⛑ Усечём текст до 800 символов на всякий случай
-    return content[:800], topic
+    return content[:2800], topic
 
 
 def generate_image_url(client: OpenAI, topic: str, retries=2) -> str:
